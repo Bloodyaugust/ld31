@@ -62,3 +62,13 @@ function start() {
         app.start();
     });
 }
+
+function Caroler (config) {
+    var me = this;
+
+    me.type = config.type || 'caroler';
+    me.texture = app.assetCollection.getTexture(config.type);
+    me.path = config.path;
+
+    for (var key in assetCollection.assets.carolers[me.type]) {}
+}

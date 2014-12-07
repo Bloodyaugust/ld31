@@ -13,5 +13,28 @@
 
     "keys": {
 
+    },
+
+    "carolers": {
+        "caroler": {
+            "health": 1,
+            "speed": 5,
+            "pointValue": 3
+        },
+        "snowman": {
+            "health": 2,
+            "speed": 3,
+            "pointValue": 8
+        },
+        "santa": {
+            "health": 5,
+            "speed": 1,
+            "pointValue": 15
+        },
+        "elf": {
+            "health": 1,
+            "speed": 10,
+            "pointValue": 25
+        }
     }
 }
