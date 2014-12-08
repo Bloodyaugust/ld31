@@ -743,11 +743,11 @@
 			}
 		}
 	},
-	"experimental-shmup": {
+	"ld31": {
 		"res": {
 			"dependencies.js": function (exports, module, require) {
 				domjs = require('domjs/lib/html5')(document);
 			}
 		}
 	}
-})("experimental-shmup/res/dependencies");
+})("ld31/res/dependencies");
