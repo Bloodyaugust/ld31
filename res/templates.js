@@ -33,33 +33,22 @@
                 )
             )
         },
-        settings: function () {
+        score: function () {
             div(
                 {'class': 'menu'},
                 div(
                     {'class': 'game-title'},
-                    'Settings'
+                    'Score'
                 ),
                 div(
                     {'class': 'button', 'id': 'menu'},
                     'Menu'
-                )
-            )
-        },
-        about: function () {
-            div(
-                {'class': 'about-content'},
-                h1(
-                    a(
-                        {'href': 'http://synsugarstudio.com'},
-                        'Made by Syntactic Sugar Studio'
-                    )
                 ),
                 div(
-                    {'class': 'menu'},
-                    div(
-                        {'class': 'button', 'id': 'menu'},
-                        'Menu'
+                    {'class': 'button'},
+                    a(
+                        {'class': 'twitter-share-button', 'href': 'https://twitter.com/share', 'data-via': 'twitterdev', 'style': 'color:#0C0;'},
+                        'Tweet Your Score!'
                     )
                 )
             )

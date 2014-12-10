@@ -48,9 +48,31 @@ function start() {
             app.currentScene.addEntity(new Player());
         }, app);
 
+        var scoreScene = new SL.Scene('score', [], function (entities) {
+            var modal = $('.modal'),
+                scoreText = new PIXI.Text('Score: ' + entities[0].score, {font: '18px Arial', fill: 'red'});
+
+            modal.append(domjs.build(templates.score));
+            modal.show();
+
+            $('.menu .button').on('click', function () {
+                modal.empty();
+                modal.off();
+                app.transitionScene($(this).attr('id'));
+            });
+
+            scoreText.position.x = 350;
+            scoreText.position.y = 400;
+
+            this.stage.addChild(scoreText);
+
+            $('.twitter-share-button').attr('href', 'https://twitter.com/share?url=http://synsugarstudio.com/ld31&hashtags=ld31,bahhumbug&text=I scored ' + entities[0].score + ' on Bah! Humbug!');
+        }, app);
+
         app.addScene(loadingScene);
         app.addScene(menuScene);
         app.addScene(gameScene);
+        app.addScene(scoreScene);
         app.transitionScene('loading');
 
         app.start();
@@ -74,6 +96,9 @@ function Caroler (config) {
     me.apparentSize = SL.Tween.lerp(0.5, 1, me.collider.origin.y / SCREEN_SIZE.y);
     me.pathPoint = 0;
     me.isDead = false;
+    me.timeToStep = 0.1;
+    me.stepInterval = 0.1;
+    me.stepState = 0;
 
     me.collider.translate(new SL.Vec2(0, -50));
 
@@ -89,11 +114,14 @@ function Caroler (config) {
             totalMove = (me.speed * app.deltaTime) * me.apparentSize;
 
         if (!me.isDead) {
+            me.timeToStep -= app.deltaTime;
+
             if (totalMove < distanceToPoint) {
                 me.collider.translate(directionToPoint.scale(totalMove));
             } else {
                 if (me.pathPoint === me.path.length - 1) {
                     me.isDead = true;
+                    app.currentScene.getEntitiesByTag('player')[0].hit();
                 } else {
                     me.collider.setLocation(me.path[me.pathPoint].getTranslated(me.collider.size.getScaled(-0.5)));
                     me.collider.translate(me.collider.origin.getDirectionVector(me.path[++me.pathPoint]).scale(totalMove - distanceToPoint));
@@ -102,6 +130,25 @@ function Caroler (config) {
 
             me.sprite.position.x = me.collider.origin.x;
             me.sprite.position.y = me.collider.origin.y;
+
+            if (me.timeToStep <= 0) {
+                me.timeToStep = me.stepInterval;
+                me.stepState++;
+
+                if (me.stepState > 3) {
+                    me.stepState = 0;
+                }
+            }
+            switch (me.stepState) {
+                case 0:
+                    me.sprite.rotation = -0.02;
+                    break;
+                case 2:
+                    me.sprite.rotation = 0.02;
+                    break;
+                default:
+                    me.sprite.position.y += 5;
+            }
 
             me.apparentSize = SL.Tween.lerp(0.5, 1, me.collider.origin.y / SCREEN_SIZE.y);
             me.sprite.scale = new PIXI.Point(me.apparentSize, me.apparentSize);
@@ -116,7 +163,10 @@ function Caroler (config) {
 
         if (me.health <= 0) {
             me.isDead = true;
+            return me.pointValue;
         }
+
+        return 0;
     }
 }
 
@@ -172,16 +222,16 @@ function Spawner () {
             result;
 
         switch (true) {
-            case rand >= 0 && rand <= 0.5:
+            case rand >= 0 && rand <= 0.75:
                 result = 'caroler';
                 break;
-            case rand > 0.5 && rand <= 0.75:
+            case rand > 0.75 && rand <= 0.90:
                 result = 'snowman';
                 break;
-            case rand > 0.75 && rand <= 0.9:
+            case rand > 0.90 && rand <= 0.98:
                 result = 'santa';
                 break;
-            case rand > 0.9 && rand <= 1:
+            case rand > 0.98 && rand <= 1:
                 result = 'elf';
                 break;
             default:
@@ -194,19 +244,21 @@ function Spawner () {
 function Player (config) {
     var me = this;
 
-    me.health = 10;
+    me.tag = 'player';
+    me.score = 0;
+    me.health = 1;
     me.clipSize = 7;
     me.clip = me.clipSize;
     me.reloadTime = 1;
     me.timeToReload = 0;
     me.shotCooldown = 0.2;
     me.timeToShotCooldown = 0;
-    me.shotJitter = 150;
-    me.jitterDecay = 20;
-    me.jitter = new SL.Vec2(0, 0);
-    me.steadyVelocity = 15;
-    me.steady = new SL.Vec2(0, 0);
+    me.jitterBase = 500;
+    me.jitterRange = 100;
+    me.steady = 150;
+    me.scopeVelocity = new SL.Vec2(0, 0);
     me.scopeOffset = new SL.Vec2(0, 0);
+    me.scopeRest = 1;
     me.sprite = new PIXI.Sprite(app.assetCollection.getTexture('scope'));
     me.sprite.anchor.x = 0.5;
     me.sprite.anchor.y = 0.5;
@@ -214,23 +266,27 @@ function Player (config) {
     me.sprite.position.y = 0;
     me.index = 0;
     me.state = 'rest';
+    me.bulletTexture = app.assetCollection.getTexture('bullet');
+    me.heartTexture = app.assetCollection.getTexture('heart');
+    me.bullets = [];
+    me.hearts = [];
+    me.scoreText = new PIXI.Text('Score: 0', {font: '18px Arial', fill: 'red'});
+
+    me.scoreText.position.x = 650;
+    me.scoreText.position.y = 20;
 
     me.update = function () {
         var offsetScope = app.mouseLocation.getTranslated(me.scopeOffset);
 
-        me.scopeOffset.translate(me.jitter.getScaled(app.deltaTime * 4));
+        me.scopeOffset.translate(me.scopeVelocity.getScaled(app.deltaTime));
+        me.scopeVelocity.scale(0.9);
+        if (me.scopeVelocity.magnitude() < me.scopeRest) {
+            me.scopeVelocity = new SL.Vec2(0, 0);
+        }
 
         if (me.state === 'rest') {
-            console.log('Jitter: ' + me.jitter.magnitude());
-
-            if (me.jitter.magnitude() > me.jitterDecay * app.deltaTime) {
-                me.jitter.translate(me.jitter.getNormal().scale(-1 * (me.jitterDecay * app.deltaTime)));
-            } else {
-                me.jitter = new SL.Vec2(0, 0);
-            }
-
-            if (me.scopeOffset.magnitude() > me.steadyVelocity * app.deltaTime) {
-                me.scopeOffset.translate(me.scopeOffset.getNormal().scale(-1 * (me.steadyVelocity * app.deltaTime)));
+            if (me.scopeOffset.magnitude() > me.steady * app.deltaTime) {
+                me.scopeOffset.translate(me.scopeOffset.getNormal().scale(-1 * (me.steady * app.deltaTime)));
             } else {
                 me.scopeOffset = new SL.Vec2(0, 0);
             }
@@ -238,9 +294,10 @@ function Player (config) {
             if (app.onMouseDown('left')) {
                 var hitTestRect = new SL.Rect(offsetScope, new SL.Vec2(1, 1)),
                     carolers = app.currentScene.getEntitiesByTag('caroler'),
-                    jitter = new SL.Vec2(me.shotJitter / 2, me.shotJitter / 2).randomize(),
+                    jitter = new SL.Vec2(me.jitterRange / 2, me.jitterRange / 2).randomize(),
                     jitterDirection = Math.random();
 
+                jitter.translate(new SL.Vec2(me.jitterBase, me.jitterBase));
                 if (jitterDirection < 0.25) {
                     jitter.x *= -1;
                 } else if (jitterDirection < 0.5) {
@@ -248,11 +305,16 @@ function Player (config) {
                 } else if (jitterDirection < 0.75) {
                     jitter.scale(-1);
                 }
-                me.jitter.translate(jitter);
+                me.scopeVelocity.translate(jitter);
 
                 for (var i = 0; i < carolers.length; i++) {
                     if (hitTestRect.intersects(carolers[i].collider)) {
-                        carolers[i].hit();
+                        me.score += carolers[i].hit();
+                        me.scoreText.setText('Score: ' + me.score);
+                        if (carolers[i].type === 'elf') {
+                            me.health++;
+                            addHeart();
+                        }
                         break;
                     }
                 }
@@ -265,12 +327,13 @@ function Player (config) {
                     me.state = 'cooldown';
                     me.timeToShotCooldown = me.shotCooldown;
                 }
+
+                removeBullet();
             }
         } else {
             if (me.state === 'cooldown') {
                 me.timeToShotCooldown -= app.deltaTime;
 
-                console.log('cooldown');
                 if (me.timeToShotCooldown <= 0) {
                     me.state = 'rest';
                 }
@@ -278,11 +341,14 @@ function Player (config) {
             if (me.state === 'reloading') {
                 me.timeToReload -= app.deltaTime;
 
-                console.log('reloading');
                 if (me.timeToReload <= 0) {
                     me.state = 'rest';
                     me.clip = me.clipSize;
                     me.timeToReload = me.reloadTime;
+
+                    for (var i = 0; i < me.clip; i++) {
+                        addBullet();
+                    }
                 }
             }
         }
@@ -291,4 +357,56 @@ function Player (config) {
         me.sprite.position.x = offsetScope.x;
         me.sprite.position.y = offsetScope.y;
     }
+
+    me.hit = function () {
+        me.health -= 1;
+        removeHeart();
+
+        if (me.health < 1) {
+            app.transitionScene('score', [{score: me.score, type: 'score'}]);
+        }
+    }
+
+    addBullet = function () {
+        var newBullet = new PIXI.Sprite(me.bulletTexture);
+
+        newBullet.anchor.x = 0.5;
+        newBullet.anchor.y = 0.5;
+        newBullet.position.x = 15 + (15 * me.bullets.length);
+        newBullet.position.y = 500;
+
+        me.bullets.push(newBullet);
+        app.currentScene.stage.addChild(newBullet);
+    };
+
+    addHeart = function () {
+        var newHeart = new PIXI.Sprite(me.heartTexture);
+
+        newHeart.anchor.x = 0.5;
+        newHeart.anchor.y = 0.5;
+        newHeart.position.x = 768 - (35 * (me.hearts.length % 5));
+        newHeart.position.y = 500 + (32 * Math.floor(me.hearts.length / 5));
+
+        me.hearts.push(newHeart);
+        app.currentScene.stage.addChild(newHeart);
+    };
+
+    removeBullet = function () {
+        app.currentScene.stage.removeChild(me.bullets[me.bullets.length - 1]);
+        me.bullets.pop();
+    };
+
+    removeHeart = function () {
+        app.currentScene.stage.removeChild(me.hearts[me.hearts.length - 1]);
+        me.hearts.pop();
+    };
+
+    for (var i = 0; i < me.clip; i++) {
+        addBullet();
+    }
+    for (i = 0; i < me.health; i++) {
+        addHeart();
+    }
+
+    app.currentScene.stage.addChild(me.scoreText);
 }
