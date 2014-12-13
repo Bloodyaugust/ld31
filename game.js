@@ -213,7 +213,7 @@ function Spawner () {
 
         me.timeToSpawn -= app.deltaTime;
 
-        me.spawnInterval = 2 - SL.Tween.quadIn(1.8,  me.gameTime / (1000 * 60 * 4));
+        me.spawnInterval = 2 - SL.Tween.quadIn(1.8,  me.gameTime / (60 * 4));
 
         if (me.timeToSpawn <= 0) {
             pathNum = Math.floor(Math.random() * 4);
