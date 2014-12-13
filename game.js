@@ -44,6 +44,11 @@ function start() {
             modal.off();
             modal.hide();
 
+            app.currentScene.addEntity({
+                type: 'background',
+                sprite: new PIXI.Sprite(app.assetCollection.getTexture('background')),
+                update: function () {}
+            });
             app.currentScene.addEntity(new Spawner());
             app.currentScene.addEntity(new Player());
         }, app);
@@ -85,7 +90,7 @@ function Caroler (config) {
 
     me.type = config.type || 'caroler';
     me.tag = 'caroler';
-    me.sprite = new PIXI.Sprite(app.assetCollection.getTexture(config.type));
+    me.sprite = new PIXI.Sprite(app.assetCollection.getTexture(config.type + '-front'));
     me.path = config.path;
     me.sprite.anchor.x = 0.5;
     me.sprite.anchor.y = 0.5;
@@ -175,11 +180,12 @@ function Spawner () {
 
     me.timeToSpawn = 3;
     me.spawnInterval = 2;
+    me.gameTime = 0;
     me.spawnpoints = [
         new SL.Vec2(-50, 200),
         new SL.Vec2(800, 200),
-        new SL.Vec2(-50, 400),
-        new SL.Vec2(800, 400)
+        new SL.Vec2(-50, 380),
+        new SL.Vec2(800, 380)
     ];
     me.paths = [
         [
@@ -191,11 +197,11 @@ function Spawner () {
             new SL.Vec2(400, 600)
         ],
         [
-            new SL.Vec2(400, 400),
+            new SL.Vec2(400, 380),
             new SL.Vec2(400, 600)
         ],
         [
-            new SL.Vec2(400, 400),
+            new SL.Vec2(400, 380),
             new SL.Vec2(400, 600)
         ]
     ];
@@ -203,7 +209,11 @@ function Spawner () {
     me.update = function () {
         var pathNum;
 
+        me.gameTime += app.deltaTime;
+
         me.timeToSpawn -= app.deltaTime;
+
+        me.spawnInterval = 2 - SL.Tween.quadIn(1.8,  me.gameTime / (1000 * 60 * 4));
 
         if (me.timeToSpawn <= 0) {
             pathNum = Math.floor(Math.random() * 4);
@@ -246,15 +256,15 @@ function Player (config) {
 
     me.tag = 'player';
     me.score = 0;
-    me.health = 1;
+    me.health = 10;
     me.clipSize = 7;
     me.clip = me.clipSize;
     me.reloadTime = 1;
     me.timeToReload = 0;
     me.shotCooldown = 0.2;
     me.timeToShotCooldown = 0;
-    me.jitterBase = 500;
-    me.jitterRange = 100;
+    me.jitterBase = 200;
+    me.jitterRange = 50;
     me.steady = 150;
     me.scopeVelocity = new SL.Vec2(0, 0);
     me.scopeOffset = new SL.Vec2(0, 0);
@@ -272,8 +282,8 @@ function Player (config) {
     me.hearts = [];
     me.scoreText = new PIXI.Text('Score: 0', {font: '18px Arial', fill: 'red'});
 
-    me.scoreText.position.x = 650;
-    me.scoreText.position.y = 20;
+    me.scoreText.position.x = 20;
+    me.scoreText.position.y = 550;
 
     me.update = function () {
         var offsetScope = app.mouseLocation.getTranslated(me.scopeOffset);

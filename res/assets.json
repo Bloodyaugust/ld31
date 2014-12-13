@@ -1,10 +1,14 @@
 {
     "images": [
-        "/img/test.png",
-        "/img/elf.png",
-        "/img/snowman.png",
-        "/img/santa.png",
-        "/img/caroler.png",
+        "/img/background.png",
+        "/img/elf-front.png",
+        "/img/elf-side.png",
+        "/img/snowman-front.png",
+        "/img/snowman-side.png",
+        "/img/santa-front.png",
+        "/img/santa-side.png",
+        "/img/caroler-front.png",
+        "/img/caroler-side.png",
         "/img/scope.png",
         "/img/heart.png",
         "/img/bullet.png"
