@@ -6,6 +6,16 @@ function logPlay() {
     _gaq.push(['_trackEvent', 'Button', 'Play']);
 }
 
+function moveModal() {
+    var $modal = $('.modal'),
+        gameOffset = $(app.canvas).offset();
+
+        $modal.offset({
+            top: gameOffset.top - 5,
+            left: gameOffset.left - 5
+        });
+}
+
 function start() {
     var startLoad = new Date;
 
@@ -14,6 +24,10 @@ function start() {
     app.assetCollection = new SL.AssetCollection('res/assets.json', app, function () {
         _gaq.push(['_trackEvent', 'Game', 'Load', '', (new Date - startLoad) / 1000]);
         $('.canvas-container').append(domjs.build(templates.modal));
+        moveModal();
+        $(window).resize(function () {
+            moveModal();
+        });
 
         var loadingScene = new SL.Scene('loading', [], function () {
         }, app);
